@@ -24,7 +24,7 @@ exports.registerUser = async (req, res) => {
       expiresIn: "1h",
     });
 
-    res.status(201).json({ token, userId: newUser._id, userName: newUser.username });
+    res.status(201).json({ token, userId: newUser._id, username: newUser.username });
   } catch (err) {
     res.status(500).json({ message: "Server error" + err.message });
   }
@@ -56,7 +56,7 @@ exports.loginUser = async (req, res) => {
       expiresIn: "1h",
     });
 
-    res.json({ token, userId: user._id, userName: user.username });
+    res.json({ token, userId: user._id, username: user.username });
   } catch (err) {
     res.status(500).json({ message: "Server error" + err.message });
   }
