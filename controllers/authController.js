@@ -9,6 +9,10 @@ exports.registerUser = async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
+  if (!req.file) {
+    return res.status(400).json({ message: "Profile picture is required" });
+  }
+
   const { username, email, password } = req.body;
   try {
     const existingUser = await User.findOne({ email });
@@ -17,14 +21,15 @@ exports.registerUser = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const newUser = new User({ username, email, password: hashedPassword });
+
+    const newUser = new User({ username, email, password: hashedPassword, profilePicture: req.file.path });
     await newUser.save();
 
     const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
 
-    res.status(201).json({ token, userId: newUser._id, username: newUser.username });
+    res.status(201).json({ token, userId: newUser._id, username: newUser.username, profilePicture: newUser.profilePicture });
   } catch (err) {
     res.status(500).json({ message: "Server error" + err.message });
   }
