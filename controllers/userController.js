@@ -106,3 +106,103 @@ exports.updateProfilePicture = async (req, res) => {
     res.status(500).json({ message: "Server error: " + error.message });
   }
 };
+
+exports.followUser = async (req, res) => {
+  try {
+    const currentUser = await User.findById(req.user.id);
+    const userToFollow = await User.findById(req.params.id);
+
+    if (!currentUser || !userToFollow) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (currentUser._id.toString() === userToFollow._id.toString()) {
+      return res.status(400).json({ message: 'You cannot follow yourself' });
+    }
+
+    if (currentUser.following.includes(userToFollow._id)) {
+      return res.status(400).json({ message: 'You are already following this user' });
+    }
+
+    currentUser.following.push(userToFollow._id);
+    await currentUser.save();
+
+    userToFollow.followers.push(currentUser._id);
+    await userToFollow.save();
+
+    res.status(200).json({ message: 'Followed successfully' });
+  } catch (err) {
+    console.error("Error in followUser function:", err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.unfollowUser = async (req, res) => {
+  try {
+    const currentUser = await User.findById(req.user.id);
+    const userToUnfollow = await User.findById(req.params.id);
+
+    if (!currentUser || !userToUnfollow) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!currentUser.following.includes(userToUnfollow._id)) {
+      return res.status(400).json({ message: 'You are not following this user' });
+    }
+
+    currentUser.following.pull(userToUnfollow._id);
+    await currentUser.save();
+
+    userToUnfollow.followers.pull(currentUser._id);
+    await userToUnfollow.save();
+
+    res.status(200).json({ message: 'Unfollowed successfully' });
+  } catch (err) {
+    console.error("Error in unfollowUser function:", err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.getFollowers = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).populate('followers', 'username profilePicture');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json(user.followers);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.getFollowing = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).populate('following', 'username profilePicture');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json(user.following);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.getSuggestedUsers = async (req, res) => {
+  try {
+    const currentUser = req.user; 
+
+    const suggestedUsers = await User.find({
+      _id: { $ne: currentUser._id }, 
+      _id: { $nin: currentUser.following }, 
+    })
+      .select('username profilePicture') 
+      .limit(10); 
+
+    res.status(200).json(suggestedUsers);
+  } catch (err) {
+    console.error("Error fetching suggested users:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
